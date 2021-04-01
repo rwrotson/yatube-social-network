@@ -48,8 +48,9 @@ def profile(request, username):
     paginator = Paginator(posts, 10)
     page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
-    return render(request, "profile.html",
-                  {"author": author, "page": page, "following": following})
+    return render(request, "profile.html", {
+                  "author": author, "page": page,
+                  "following": following})
 
 
 def post_view(request, username, post_id):
@@ -116,7 +117,8 @@ def follow_index(request):
     paginator = Paginator(latest, 10)
     page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
-    return render(request, "follow.html", {"page": page})
+    return render(
+        request, "follow.html", {"page": page, "paginator": paginator})
 
 
 @login_required
