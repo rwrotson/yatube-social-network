@@ -3,7 +3,7 @@ from django.urls import reverse
 from django import forms
 from django.core.cache import cache
 
-from posts.models import Group, Post, User, Follow
+from posts.models import Group, Post, User, Follow, Comment
 
 
 class TaskPagesTests(TestCase):
@@ -26,12 +26,18 @@ class TaskPagesTests(TestCase):
             text='Тестовый текст для второй группы',
             author=cls.user,
             group=cls.other_group,
+            pk=101,
         )
         cls.post = Post.objects.create(
             text='Тестовый текст',
             author=cls.user,
             group=cls.group,
             pk=100,
+        )
+        cls.comment = Comment.objects.create(
+            text='Текст комментария',
+            post=cls.post,
+            author=cls.user,
         )
 
     def setUp(self):
@@ -124,10 +130,13 @@ class TaskPagesTests(TestCase):
         context = response.context
         self.assertIsInstance(context['author'], User)
         self.assertIsInstance(context['post'], Post)
+        self.assertIsInstance(context['comments'][0], Comment)
         author_name = context['author'].username
         self.assertEqual(author_name, 'testuser')
         first_post = context['post']
         self.check_post_context(first_post)
+        self.assertEqual(
+            context['comments'][0].text, 'Текст комментария')
 
     def test_new_post_is_not_in_other_group(self):
         """Новый пост с указанием группы не появляется
@@ -179,13 +188,18 @@ class TaskPagesTests(TestCase):
         second_response = response.content
         self.assertNotEqual(first_response, second_response)
 
-    def test_subscription(self):
+    def test_subscription_follow(self):
         """Авторизованный пользователь может подписываться
-        на других пользователей и удалять их из подписок."""
+        на других пользователей"""
         self.authorized_client.get(reverse(
             'profile_follow', kwargs={'username': 'testuser2'}))
         self.assertTrue(Follow.objects.filter(
             user=self.user, author=self.user2).exists())
+
+    def test_subscription_unfollow(self):
+        """Авторизованный пользователь может отписываться
+        от других пользователей"""
+        Follow.objects.create(user=self.user, author=self.user2)
         self.authorized_client.get(reverse(
             'profile_unfollow', kwargs={'username': 'testuser2'}))
         self.assertFalse(Follow.objects.filter(
@@ -210,3 +224,21 @@ class TaskPagesTests(TestCase):
         first_post = response.context['page'][0]
         self.assertNotEqual(first_post.text, 'Тест работы ленты')
         self.assertNotEqual(first_post.author, self.user2)
+
+    def test_comment_is_not_in_other_post(self):
+        """Новый комментарий не появляется
+        на странице другого поста"""
+        kwargs_dict = {'username': 'testuser', 'post_id': '100'}
+        response = self.authorized_client.get(
+            reverse('post', kwargs=kwargs_dict)
+        )
+        Comment.objects.create(
+            text='Текст комментария 2',
+            post=self.other_post,
+            author=self.user,
+        )
+        context = response.context
+        self.assertEqual(
+            context['comments'][0].text, 'Текст комментария')
+
+    # тесты для комментариев см в test_forms, спасибо за работу!

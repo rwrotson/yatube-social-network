@@ -39,8 +39,8 @@ class Post(models.Model):
 
 class Comment(models.Model):
     text = models.TextField(
-        verbose_name='Текст поста',
-        help_text='Введите текст поста'
+        verbose_name='Текст комментария',
+        help_text='Введите текст комментария'
     )
     created = models.DateTimeField('date published', auto_now_add=True)
     post = models.ForeignKey(Post, on_delete=models.CASCADE,

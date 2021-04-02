@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 
-from posts.models import Post, Group, User, Comment, Follow
+from posts.models import Post, Group, User, Follow
 from posts.forms import PostForm, CommentForm
 
 
@@ -56,7 +56,7 @@ def profile(request, username):
 def post_view(request, username, post_id):
     post = get_object_or_404(Post, pk=post_id, author__username=username)
     author = post.author
-    comments = Comment.objects.filter(post=post)
+    comments = post.comments.all()
     if not request.user.is_authenticated:
         following = False
     else:
@@ -75,6 +75,7 @@ def post_view(request, username, post_id):
     return render(request, "post.html", context)
 
 
+@login_required
 def post_edit(request, username, post_id):
     post = get_object_or_404(Post, pk=post_id, author__username=username)
     author = post.author
@@ -95,7 +96,7 @@ def post_edit(request, username, post_id):
 def add_comment(request, username, post_id):
     post = get_object_or_404(Post, author__username=username, id=post_id)
     author = post.author
-    comments = Comment.objects.filter(post=post)
+    comments = post.comments.all()
     following = Follow.objects.filter(
         author=author, user=request.user).exists()
     form = CommentForm(request.POST or None)

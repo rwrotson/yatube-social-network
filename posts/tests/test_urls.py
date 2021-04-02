@@ -76,7 +76,8 @@ class URLTests(TestCase):
         анонимного пользователя на страницу просмотра поста."""
         response = self.guest_client.get('/testuser/100/edit/',
                                          follow=True)
-        self.assertRedirects(response, '/testuser/100/')
+        self.assertRedirects(response,
+                             '/auth/login/?next=/testuser/100/edit/')
 
     def test_edit_url_redirect_other_user(self):
         """Страница /<username>/<post_id>/edit/ перенаправит
@@ -91,7 +92,9 @@ class URLTests(TestCase):
         templates_url_names = {
             'index.html': '/',
             'new.html': '/new/',
-            'group.html': '/group/testgroup/'
+            'group.html': '/group/testgroup/',
+            'profile.html': '/testuser/',
+            'post.html': '/testuser/100/',
         }
         for template, reverse_name in templates_url_names.items():
             with self.subTest():
@@ -106,5 +109,49 @@ class URLTests(TestCase):
 
     def test_url_404(self):
         """Страница несуществующего поста вернет ответ 404"""
-        response = self.guest_client.get('/testuser/101/')
+        response = self.guest_client.get('/101/')
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+
+    def test_url_follow_by_guest_user(self):
+        """Страница /<username>/follow/ недоступна
+        неавторизированному пользователю
+        и перенаправит его на страницу логина"""
+        response = self.guest_client.get('/testuser/follow/',
+                                         follow=True)
+        self.assertRedirects(response, '/auth/login/?next=/testuser/follow/')
+
+    def test_url_follow_by_other_user(self):
+        """Страница /<username>/follow/ доступна
+        авторизированному автору поста
+        и перенаправляет на профиль"""
+        response = self.authorized_client2.get('/testuser/follow/',
+                                               follow=True)
+        self.assertRedirects(response, '/testuser/')
+
+    def test_url_unfollow_by_guest_user(self):
+        """Страница /<username>/unfollow/ недоступна
+        неавторизированному пользователю
+        и перенаправит его на логин"""
+        response = self.guest_client.get('/testuser/follow/',
+                                         follow=True)
+        self.assertRedirects(response, '/auth/login/?next=/testuser/follow/')
+
+    def test_url_unfollow_by_other_user(self):
+        """Страница /<username>/unfollow/ доступна
+        авторизированному автору поста
+        и перенаправляет на профиль"""
+        response = self.authorized_client2.get('/testuser/follow/',
+                                               follow=True)
+        self.assertRedirects(response, '/testuser/')
+
+    def test_urls_authorized(self):
+        """Страница /post/comment/ доступна авторизованному пользователю."""
+        response = self.authorized_client.get('/testuser/100/comment')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_new_url_redirect_anonymous(self):
+        """Страница /post/comment/ перенаправит анонимного пользователя
+        на страницу логина."""
+        response = self.guest_client.get('/testuser/100/comment', follow=True)
+        self.assertRedirects(response,
+                             '/auth/login/?next=/testuser/100/comment')
